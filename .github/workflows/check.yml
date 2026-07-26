@@ -1,60 +1,28 @@
-import os
-import requests
-from playwright.sync_api import sync_playwright
+name: Shark Valley Checker
 
-WEBHOOK = os.environ["DISCORD_WEBHOOK"]
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/15 * * * *"
 
-URL = "https://www.sharkvalleytramtours.com/event-calendar/"
+jobs:
+  test:
+    runs-on: ubuntu-latest
 
-TARGET_DATE = "November 7"
-TARGET_TIME = "2:00 PM"
+    steps:
+      - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-def send_alert(message):
-    requests.post(
-        WEBHOOK,
-        json={"content": message},
-        timeout=30
-    )
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
+      - name: Install browser
+        run: playwright install chromium
 
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
-
-    page = browser.new_page()
-
-    page.goto(
-        URL,
-        wait_until="networkidle",
-        timeout=60000
-    )
-
-    page.wait_for_timeout(5000)
-
-    text = page.locator("body").inner_text()
-
-    browser.close()
-
-
-print("Page loaded successfully")
-
-# Debug output so we can see what GitHub sees
-print(text[:2000])
-
-
-if TARGET_DATE in text and TARGET_TIME in text:
-
-    if "Sold Out" not in text and "Sold out" not in text:
-        send_alert(
-            "🚨 Shark Valley Tram Tour may be available!\n"
-            "November 7 at 2:00 PM\n\n"
-            + URL
-        )
-
-        print("ALERT SENT")
-
-    else:
-        print("Still sold out")
-
-else:
-    print("Target date/time not found")
+      - name: Run checker
+        run: python check.py
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
