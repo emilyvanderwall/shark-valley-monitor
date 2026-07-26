@@ -34,43 +34,25 @@ with sync_playwright() as p:
 
     page.wait_for_timeout(5000)
 
-    # Find all calendar event elements
-    events = page.locator(".fc-event")
+    # Look for anything containing 2:00PM
+    matches = page.locator("text=2:00PM")
 
-    print("Events found:", events.count())
+    print("2PM matches:", matches.count())
 
-    found = False
+    for i in range(matches.count()):
 
-    for i in range(events.count()):
+        el = matches.nth(i)
 
-        event = events.nth(i)
+        print("\n--- MATCH", i, "---")
+        print(el.inner_text())
 
-        text = event.inner_text()
+        try:
+            print("TAG:", el.evaluate("(e)=>e.tagName"))
+            print("CLASS:", el.get_attribute("class"))
+            print("HTML:")
+            print(el.evaluate("(e)=>e.outerHTML")[:1000])
+        except Exception as e:
+            print(e)
 
-        date = event.get_attribute("data-date")
-
-        print("DATE:", date)
-        print(text)
-
-        if (
-            date == "2026-11-07"
-            and "2:00PM" in text
-            and "Sold Out" not in text
-        ):
-            found = True
-
-    if found:
-
-        msg = (
-            "🦈 Shark Valley Tram Tour Available!\n\n"
-            "November 7, 2026\n"
-            "2:00 PM Tram Tour"
-        )
-
-        print(msg)
-        send_discord(msg)
-
-    else:
-        print("November 7 2 PM tour not available")
 
     browser.close()
