@@ -1,9 +1,7 @@
 from playwright.sync_api import sync_playwright
 import os
 import requests
-
-TARGET_DATE = "November 7, 2026"
-TARGET_TIME = "2:00PM Tram Tour"
+import time
 
 DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK")
 
@@ -33,32 +31,54 @@ with sync_playwright() as p:
     except:
         pass
 
-    page.wait_for_timeout(3000)
+    page.wait_for_timeout(5000)
 
     print("Calendar loaded")
 
-    # Navigate until November 2026
+    # Move to November 2026
     for i in range(12):
+
         body = page.locator("body").inner_text()
 
         if "November 2026" in body:
             print("Found November 2026")
             break
 
-        # click the right arrow only
-        page.locator(".fc-text-arrow").last.click(timeout=10000)
+        print("Moving forward one month")
+
+        # Use JS click on the calendar next arrow
+        clicked = page.evaluate("""
+        () => {
+            let arrows = document.querySelectorAll('.fc-text-arrow');
+            if (arrows.length > 1) {
+                arrows[1].click();
+                return true;
+            }
+
+            let buttons = document.querySelectorAll('button');
+            for (let b of buttons) {
+                if (b.innerText.includes('›')) {
+                    b.click();
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        """)
+
+        if not clicked:
+            print("Could not find next month button")
+            break
+
         page.wait_for_timeout(2000)
 
-    else:
-        print("Could not reach November 2026")
-        browser.close()
-        exit()
 
+    print("Searching events")
 
-    # Find all event blocks
     events = page.locator(".fc-event")
 
-    print("Total events:", events.count())
+    print("Event count:", events.count())
 
     found = False
 
@@ -68,33 +88,30 @@ with sync_playwright() as p:
 
         text = event.inner_text()
 
-        if TARGET_TIME in text:
+        if "2:00PM Tram Tour" in text:
 
             print("----------------")
             print(text)
 
-            # Look at parent day container for date
-            parent = event.locator("xpath=ancestor::*[contains(@class,'fc-day')]").first
+            # print HTML so we can see where the date lives
+            html = event.evaluate("(e)=>e.outerHTML")
 
-            date = parent.get_attribute("data-date")
-
-            print("DATE:", date)
+            print(html[:500])
 
             if (
-                date == "2026-11-07"
-                and "Sold Out" not in text
+                "Sold Out" not in text
+                and "November 7" in text
             ):
                 found = True
 
-                message = (
-                    "🚨 Shark Valley Tram Tour Available!\n\n"
-                    "November 7, 2026\n"
-                    "2:00 PM Tram Tour\n\n"
+                msg = (
+                    "🚨 Shark Valley Tram Tour Available!\n"
+                    "November 7, 2026 at 2:00 PM\n\n"
                     + text
                 )
 
-                print(message)
-                send_discord(message)
+                print(msg)
+                send_discord(msg)
                 break
 
 
