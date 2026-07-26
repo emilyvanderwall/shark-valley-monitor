@@ -1,12 +1,12 @@
 from playwright.sync_api import sync_playwright
 import os
 import requests
-import re
 
-TARGET_DATE = "2026-11-07"
+TARGET_DATE = "November 7, 2026"
 TARGET_TIME = "2:00PM Tram Tour"
 
 DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK")
+
 
 def send_discord(message):
     if DISCORD_WEBHOOK:
@@ -14,6 +14,7 @@ def send_discord(message):
             DISCORD_WEBHOOK,
             json={"content": message}
         )
+
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
@@ -25,84 +26,79 @@ with sync_playwright() as p:
         timeout=60000
     )
 
-    # Close popup if present
+    # Close popup
     try:
         page.locator(".pum-close").click(timeout=5000)
         print("Closed popup")
     except:
         pass
 
-    # Open calendar if needed
-    try:
-        page.get_by_text("Tram Tours").first.click(timeout=5000)
-    except:
-        pass
-
-    page.wait_for_timeout(5000)
+    page.wait_for_timeout(3000)
 
     print("Calendar loaded")
 
-    # Navigate calendar to November 2026
-    while True:
-        month = page.locator(".fc-center h2").inner_text()
+    # Navigate until November 2026
+    for i in range(12):
+        body = page.locator("body").inner_text()
 
-        print("Current month:", month)
-
-        if "November 2026" in month:
+        if "November 2026" in body:
+            print("Found November 2026")
             break
 
-        page.locator(".fc-next-button").click()
-        page.wait_for_timeout(1000)
+        # click the right arrow only
+        page.locator(".fc-text-arrow").last.click(timeout=10000)
+        page.wait_for_timeout(2000)
 
-    print("November 2026 found")
+    else:
+        print("Could not reach November 2026")
+        browser.close()
+        exit()
 
-    # Grab all calendar events
+
+    # Find all event blocks
     events = page.locator(".fc-event")
+
+    print("Total events:", events.count())
 
     found = False
 
-    print("Checking events...")
-
     for i in range(events.count()):
+
         event = events.nth(i)
 
         text = event.inner_text()
 
-        # Get date from FullCalendar attributes
-        attrs = [
-            event.get_attribute("data-date"),
-            event.get_attribute("data-start"),
-            event.get_attribute("href")
-        ]
+        if TARGET_TIME in text:
 
-        date_string = " ".join(
-            [x for x in attrs if x]
-        )
+            print("----------------")
+            print(text)
 
-        print("----------------")
-        print(text)
-        print("ATTR:", date_string)
+            # Look at parent day container for date
+            parent = event.locator("xpath=ancestor::*[contains(@class,'fc-day')]").first
 
-        if (
-            "2:00PM Tram Tour" in text
-            and "2026-11-07" in date_string
-            and "Sold Out" not in text
-        ):
-            found = True
+            date = parent.get_attribute("data-date")
 
-            message = (
-                "🚨 Shark Valley Tram Tour Available!\n\n"
-                "Date: November 7, 2026\n"
-                "Time: 2:00 PM\n\n"
-                f"{text}"
-            )
+            print("DATE:", date)
 
-            print(message)
-            send_discord(message)
+            if (
+                date == "2026-11-07"
+                and "Sold Out" not in text
+            ):
+                found = True
 
-            break
+                message = (
+                    "🚨 Shark Valley Tram Tour Available!\n\n"
+                    "November 7, 2026\n"
+                    "2:00 PM Tram Tour\n\n"
+                    + text
+                )
+
+                print(message)
+                send_discord(message)
+                break
+
 
     if not found:
-        print("November 7 2026 2 PM tour still unavailable")
+        print("November 7 2 PM tour still unavailable")
 
     browser.close()
