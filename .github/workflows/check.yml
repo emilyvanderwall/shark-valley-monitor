@@ -3,6 +3,9 @@ name: Shark Valley Checker
 on:
   workflow_dispatch:
 
+  schedule:
+    - cron: "*/15 * * * *"
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -16,6 +19,9 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Install browser
+        run: playwright install chromium
 
       - name: Run checker
         run: python check.py
