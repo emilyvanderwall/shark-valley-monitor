@@ -17,3 +17,5 @@ jobs:
         python-version: '3.12'
 
     - run: python check.py
+  env:
+    DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
