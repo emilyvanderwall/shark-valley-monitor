@@ -17,18 +17,20 @@ with sync_playwright() as p:
 
     print("Homepage loaded")
 
-    # Click Buy Tickets
-    page.get_by_text("Buy Tickets", exact=True).click(timeout=15000)
+    # Click the actual event calendar link
+    page.locator('a[href="/event-calendar/"]').first.click(timeout=15000)
 
-    print("Clicked Buy Tickets")
+    print("Clicked event calendar")
 
-    page.wait_for_timeout(10000)
+    page.wait_for_load_state("networkidle", timeout=60000)
 
     print("URL:")
     print(page.url)
 
+    page.wait_for_timeout(5000)
+
     text = page.locator("body").inner_text()
 
-    print(text[:3000])
+    print(text[:5000])
 
     browser.close()
