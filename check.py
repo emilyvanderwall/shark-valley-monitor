@@ -28,57 +28,51 @@ with sync_playwright() as p:
 
     page.wait_for_timeout(5000)
 
-    # Close popup if it appears
+    # Close popup
     try:
         page.locator(".pum-close").click(timeout=5000)
         page.wait_for_timeout(2000)
-        print("Closed popup")
     except:
-        print("No popup found")
+        pass
 
-    # Show current calendar month
-    print("Starting calendar:")
-    print(page.locator("body").inner_text()[:500])
-
-    # Move forward 4 months:
-    # July 2026 -> August -> September -> October -> November
+    # Move July -> November
     for i in range(4):
         page.locator(".fc-text-arrow").nth(1).click(timeout=10000)
         page.wait_for_timeout(3000)
 
-    text = page.locator("body").inner_text()
+    # Extract calendar event information
+    events = page.locator(".fc-event")
+
+    found = False
+
+    for i in range(events.count()):
+        event = events.nth(i).inner_text()
+
+        if "2:00PM Tram Tour" in event:
+            print(event)
+
+            # Get date from event element
+            date = events.nth(i).get_attribute("data-date")
+
+            print("DATE:", date)
+
+            if date == "2026-11-07":
+
+                found = True
+
+                if "Sold Out (0)" in event:
+                    print("November 7 2 PM still sold out")
+                else:
+                    send_alert(
+                        "🚨 Shark Valley Tram Tour OPEN!\n\n"
+                        "November 7, 2026 at 2:00 PM\n\n"
+                        + URL
+                    )
+
+                break
 
     browser.close()
 
 
-print("Calendar loaded")
-print(text[:3000])
-
-
-if "November 2026" in text:
-
-    print("Found November 2026")
-
-    if "2:00PM Tram Tour" in text:
-
-        print("Found 2 PM tour")
-
-        if "Availability: Sold Out (0)" in text:
-
-            print("Still sold out")
-
-        else:
-
-            send_alert(
-                "🚨 Shark Valley Tram Tour OPEN!\n\n"
-                "November 7, 2026 at 2:00 PM\n\n"
-                + URL
-            )
-
-            print("ALERT SENT")
-
-    else:
-        print("2 PM tour not found")
-
-else:
-    print("Could not move to November 2026")
+if not found:
+    print("November 7 2 PM event not found")
