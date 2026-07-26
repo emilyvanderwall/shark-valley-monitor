@@ -6,9 +6,6 @@ WEBHOOK = os.environ.get("DISCORD_WEBHOOK")
 
 URL = "https://www.sharkvalleytramtours.com/"
 
-TARGET_DATE = "2026-11-07"
-TARGET_TIME = "2:00PM"
-
 
 def send_discord(message):
     if WEBHOOK:
@@ -20,12 +17,13 @@ def send_discord(message):
 
 
 with sync_playwright() as p:
+
     browser = p.chromium.launch(headless=True)
     page = browser.new_page()
 
     page.goto(URL, wait_until="networkidle", timeout=60000)
 
-    # Close popup if present
+    # Close popup
     try:
         page.locator(".pum-close").click(timeout=5000)
         print("Closed popup")
@@ -34,37 +32,43 @@ with sync_playwright() as p:
 
     print("Calendar loaded")
 
-    # wait for calendar text
     page.wait_for_timeout(5000)
 
-    # Extract all calendar event text
-    body = page.locator("body").inner_text()
+    # Find all calendar event elements
+    events = page.locator(".fc-event")
+
+    print("Events found:", events.count())
 
     found = False
 
-    lines = body.splitlines()
+    for i in range(events.count()):
 
-    for i, line in enumerate(lines):
+        event = events.nth(i)
 
-        if TARGET_TIME in line:
-            block = "\n".join(lines[i:i+3])
+        text = event.inner_text()
 
-            print(block)
+        date = event.get_attribute("data-date")
 
-            if "high" in block.lower():
-                found = True
-                break
+        print("DATE:", date)
+        print(text)
+
+        if (
+            date == "2026-11-07"
+            and "2:00PM" in text
+            and "Sold Out" not in text
+        ):
+            found = True
 
     if found:
-        message = (
+
+        msg = (
             "🦈 Shark Valley Tram Tour Available!\n\n"
-            "Date: November 7, 2026\n"
-            "Time: 2:00 PM\n"
-            "Availability found"
+            "November 7, 2026\n"
+            "2:00 PM Tram Tour"
         )
 
-        print(message)
-        send_discord(message)
+        print(msg)
+        send_discord(msg)
 
     else:
         print("November 7 2 PM tour not available")
