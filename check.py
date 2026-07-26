@@ -17,31 +17,29 @@ params = {
 response = requests.get(url, params=params)
 
 print("Status:", response.status_code)
+print("Raw response:")
+print(response.text[:500])
 
-events = response.json()
+try:
+    events = response.json()
+except Exception:
+    print("Not JSON response")
+    exit()
 
-print("Events returned:", len(events))
+print("Returned type:", type(events))
 
-found = False
+if isinstance(events, list):
+    print("Events returned:", len(events))
 
-for event in events:
-    start = event.get("start", "")
-    
-    if start.startswith("2026-11-07"):
-        print("----------------------")
-        print(event["title"])
-        print("Time:", start)
-        print("Availability:", event["available"])
-        print("Status:", event["avail-words"])
-        print("URL:", event["url"])
+    for event in events:
+        if event.get("start", "").startswith("2026-11-07"):
+            print("----------------------")
+            print(event["title"])
+            print("Time:", event["start"])
+            print("Availability:", event["available"])
+            print("Status:", event["avail-words"])
+            print("URL:", event["url"])
 
-        if event["title"] == "2:00PM Tram Tour" and event["available"] > 0:
-            found = True
-
-
-print("----------------------")
-
-if found:
-    print("🎉 November 7 2PM tram tour AVAILABLE!")
 else:
-    print("November 7 2PM tour not available")
+    print("Unexpected API response:")
+    print(events)
