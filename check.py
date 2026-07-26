@@ -1,45 +1,88 @@
 import requests
-from datetime import datetime
+import re
 import time
+from datetime import datetime
 
-print("Checking Shark Valley availability...")
+session = requests.Session()
 
-url = "https://www.sharkvalleytramtours.com/wp-admin/admin-ajax.php"
+calendar_url = "https://www.sharkvalleytramtours.com/event-calendar/"
+
+print("Loading calendar page...")
+
+html = session.get(calendar_url).text
+
+# Find the qscal ajax URL embedded in page scripts
+match = re.search(
+    r'admin-ajax\.php\?action=qscal[^"\']+',
+    html
+)
+
+if not match:
+    print("Could not find calendar API URL")
+    exit()
+
+api_path = match.group(0)
+
+print("Found API:")
+print(api_path)
+
+
+# Extract v token
+v_match = re.search(r'v=([^&"\']+)', api_path)
+
+if not v_match:
+    print("Could not find v token")
+    exit()
+
+v = v_match.group(1)
+
+print("Token:", v)
+
 
 params = {
     "action": "qscal",
     "t": str(time.time()),
-    "v": "9ff15798a708d16fde95b7e7d8aaef47",
-    "start": int(datetime(2026, 11, 1).timestamp()),
-    "end": int(datetime(2026, 12, 1).timestamp())
+    "v": v,
+    "start": int(datetime(2026,11,1).timestamp()),
+    "end": int(datetime(2026,12,1).timestamp())
 }
 
-response = requests.get(url, params=params)
 
-print("Status:", response.status_code)
-print("Raw response:")
-print(response.text[:500])
+print("Requesting events...")
 
-try:
-    events = response.json()
-except Exception:
-    print("Not JSON response")
+response = session.get(
+    "https://www.sharkvalleytramtours.com/wp-admin/admin-ajax.php",
+    params=params
+)
+
+print("Response:", response.text[:200])
+
+
+events = response.json()
+
+if not isinstance(events, list):
+    print("Unexpected response:")
+    print(events)
     exit()
 
-print("Returned type:", type(events))
 
-if isinstance(events, list):
-    print("Events returned:", len(events))
+print("Events:", len(events))
 
-    for event in events:
-        if event.get("start", "").startswith("2026-11-07"):
-            print("----------------------")
-            print(event["title"])
-            print("Time:", event["start"])
-            print("Availability:", event["available"])
-            print("Status:", event["avail-words"])
-            print("URL:", event["url"])
+found=False
 
+for e in events:
+    if e.get("start","").startswith("2026-11-07"):
+        print("----------------")
+        print(e["title"])
+        print(e["start"])
+        print("Available:", e["available"])
+        print(e["avail-words"])
+
+        if e["title"] == "2:00PM Tram Tour" and e["available"] > 0:
+            found=True
+
+
+if found:
+    print("🎉 November 7 2PM AVAILABLE")
 else:
-    print("Unexpected API response:")
-    print(events)
+    print("November 7 2PM not available")
