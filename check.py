@@ -1,50 +1,111 @@
-Traceback (most recent call last):
-  File "/home/runner/work/shark-valley-monitor/shark-valley-monitor/check.py", line 43, in <module>
-Closed popup
-    links.nth(i).click()
-  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 17672, in click
-Homepage loaded
-Ticket links found: 3
-Clicking visible ticket link
-    self._sync(
-  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
-    return task.result()
-           ^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/playwright/_impl/_locator.py", line 163, in click
-    return await self._frame._click(self._selector, strict=True, **params)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/playwright/_impl/_frame.py", line 591, in _click
-    await self._channel.send("click", self._timeout, locals_to_params(locals()))
-  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 69, in send
-    return await self._connection.wrap_api_call(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/opt/hostedtoolcache/Python/3.12.13/x64/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 563, in wrap_api_call
-    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
-playwright._impl._errors.TimeoutError: Locator.click: Timeout 30000ms exceeded.
-Call log:
-  - waiting for locator("a[href=\"/event-calendar/\"]").nth(1)
-    - locator resolved to <a class="icon-tickets" href="/event-calendar/">Buy Tickets</a>
-  - attempting click action
-    2 × waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <div role="dialog" id="pum-147007" aria-modal="true" class="pum pum-overlay pum-theme-146997 pum-theme-default-theme popmake-overlay auto_open click_open pum-active" data-popmake="{"id":147007,"slug":"alert-popup","theme_id":146997,"cookies":[{"event":"on_popup_close","settings":{"name":"pum-147007","time":"1 month","session":false,"path":"1","key":""}}],"triggers":[{"type":"auto_open","settings":{"delay":500,"cookie_name":["pum-147007"]}},{"type":"click_open","settings":{"extra_selectors":"","cook…>…</div> intercepts pointer events
-    - retrying click action
-    - waiting 20ms
-    2 × waiting for element to be visible, enabled and stable
-      - element is visible, enabled and stable
-      - scrolling into view if needed
-      - done scrolling
-      - <div role="dialog" id="pum-147007" aria-modal="true" class="pum pum-overlay pum-theme-146997 pum-theme-default-theme popmake-overlay auto_open click_open pum-active" data-popmake="{"id":147007,"slug":"alert-popup","theme_id":146997,"cookies":[{"event":"on_popup_close","settings":{"name":"pum-147007","time":"1 month","session":false,"path":"1","key":""}}],"triggers":[{"type":"auto_open","settings":{"delay":500,"cookie_name":["pum-147007"]}},{"type":"click_open","settings":{"extra_selectors":"","cook…>…</div> intercepts pointer events
-    - retrying click action
-      - waiting 100ms
-    58 × waiting for element to be visible, enabled and stable
-       - element is visible, enabled and stable
-       - scrolling into view if needed
-       - done scrolling
-       - <div role="dialog" id="pum-147007" aria-modal="true" class="pum pum-overlay pum-theme-146997 pum-theme-default-theme popmake-overlay auto_open click_open pum-active" data-popmake="{"id":147007,"slug":"alert-popup","theme_id":146997,"cookies":[{"event":"on_popup_close","settings":{"name":"pum-147007","time":"1 month","session":false,"path":"1","key":""}}],"triggers":[{"type":"auto_open","settings":{"delay":500,"cookie_name":["pum-147007"]}},{"type":"click_open","settings":{"extra_selectors":"","cook…>…</div> intercepts pointer events
-     - retrying click action
-       - waiting 500ms
+from playwright.sync_api import sync_playwright
+import requests
+import os
+import re
 
-Error: Process completed with exit code 1.
+WEBHOOK = os.environ.get("DISCORD_WEBHOOK")
+
+TARGET_DATE = "November 7"
+TARGET_TIME = "2:00PM Tram Tour"
+
+
+def send_alert(message):
+    if WEBHOOK:
+        requests.post(WEBHOOK, json={"content": message})
+
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page()
+
+    print("Opening calendar directly...")
+
+    page.goto(
+        "https://www.sharkvalleytramtours.com/event-calendar/",
+        wait_until="networkidle",
+        timeout=60000
+    )
+
+    page.wait_for_timeout(5000)
+
+    # Close popup if present
+    try:
+        page.locator(".pum-close").click(timeout=3000)
+        print("Closed popup")
+    except:
+        try:
+            page.keyboard.press("Escape")
+            print("Closed popup with escape")
+        except:
+            pass
+
+    print("Calendar loaded")
+
+
+    # Find dropdowns
+    selects = page.locator("select")
+
+    print("Dropdown count:", selects.count())
+
+    for i in range(selects.count()):
+        options = selects.nth(i).locator("option").all_inner_texts()
+        print(i, options[:5], "...")
+
+        if "2026" in options:
+            print("Selecting year 2026")
+            selects.nth(i).select_option(label="2026")
+
+        if "November" in options:
+            print("Selecting November")
+            selects.nth(i).select_option(label="November")
+
+
+    page.wait_for_timeout(5000)
+
+
+    # Grab calendar text
+    body = page.locator("body").inner_text()
+
+    print("Looking for November 7...")
+
+
+    # Print any area containing 2PM tours
+    matches = [
+        m.start()
+        for m in re.finditer("2:00PM Tram Tour", body)
+    ]
+
+    print("2PM matches:", len(matches))
+
+
+    found = False
+
+    for index in matches:
+
+        section = body[index-300:index+300]
+
+        print("--------------------")
+        print(section)
+
+        if "Sold Out (0)" not in section:
+
+            if "7" in section:
+
+                found = True
+
+                message = (
+                    "🦈 Shark Valley Tram Tour Available!\n\n"
+                    "Date: November 7, 2026\n"
+                    "Time: 2:00 PM"
+                )
+
+                print(message)
+                send_alert(message)
+                break
+
+
+    if not found:
+        print("November 7 2PM tour not available")
+
+
+    browser.close()
