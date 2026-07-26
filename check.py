@@ -15,32 +15,20 @@ with sync_playwright() as p:
     except:
         pass
 
-    print("Calendar loaded")
+    print("Homepage loaded")
 
-    page.wait_for_timeout(5000)
+    # Click Buy Tickets
+    page.get_by_text("Buy Tickets", exact=True).click(timeout=15000)
 
-    # Find elements containing Tram Tour
-    elements = page.locator("text=Tram Tour")
+    print("Clicked Buy Tickets")
 
-    print("Tram Tour matches:", elements.count())
+    page.wait_for_timeout(10000)
 
-    for i in range(min(elements.count(), 10)):
+    print("URL:")
+    print(page.url)
 
-        el = elements.nth(i)
+    text = page.locator("body").inner_text()
 
-        print("\n--- RESULT", i, "---")
-
-        try:
-            print("TAG:", el.evaluate("(e)=>e.tagName"))
-            print("CLASS:", el.get_attribute("class"))
-            print("ID:", el.get_attribute("id"))
-            print("TEXT:")
-            print(el.inner_text())
-
-            print("HTML:")
-            print(el.evaluate("(e)=>e.outerHTML")[:1500])
-
-        except Exception as e:
-            print("ERROR:", e)
+    print(text[:3000])
 
     browser.close()
