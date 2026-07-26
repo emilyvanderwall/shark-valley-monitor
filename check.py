@@ -17,6 +17,7 @@ def send_alert(message):
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
+
     page = browser.new_page()
 
     page.goto(
@@ -27,33 +28,52 @@ with sync_playwright() as p:
 
     page.wait_for_timeout(5000)
 
-    page.locator("select[rel='year']").select_option("2026")
-    page.wait_for_timeout(2000)
-
-    page.locator("select[rel='month']").select_option("11")
-    page.wait_for_timeout(5000)
+    # The calendar opens on July 2026.
+    # Click next month 4 times to reach November 2026.
+    for i in range(4):
+        page.locator("text=›").first.click()
+        page.wait_for_timeout(2000)
 
     text = page.locator("body").inner_text()
 
     browser.close()
 
 
+print("Calendar loaded")
 print(text[:3000])
 
-if "November 7" in text or "Nov 7" in text:
-    print("Found November 7")
 
-    if "2:00PM Tram Tour" in text:
-        if "Availability: Sold Out (0)" in text:
-            print("Still sold out")
+# Confirm we reached November
+if "November 2026" in text:
+
+    print("Found November 2026")
+
+    # Look for November 7 and the 2 PM tour
+    if "November 7" in text or "Nov 7" in text:
+
+        print("Found November 7")
+
+        if "2:00PM Tram Tour" in text:
+
+            print("Found 2:00 PM tour")
+
+            if "Availability: Sold Out (0)" in text:
+                print("Still sold out")
+
+            else:
+                send_alert(
+                    "🚨 Shark Valley Tram Tour OPEN!\n\n"
+                    "November 7, 2026 at 2:00 PM\n\n"
+                    + URL
+                )
+
+                print("ALERT SENT")
+
         else:
-            send_alert(
-                "🚨 Shark Valley Tram Tour OPEN!\n\n"
-                "November 7, 2026 at 2:00 PM\n"
-                + URL
-            )
-            print("ALERT SENT")
+            print("2:00 PM tour not found")
+
     else:
-        print("2 PM tour not found")
+        print("November 7 not found")
+
 else:
-    print("November 7 not found")
+    print("Could not move to November 2026")
