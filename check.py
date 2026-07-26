@@ -28,7 +28,7 @@ with sync_playwright() as p:
 
     page.wait_for_timeout(5000)
 
-    # Close popup if it appears
+    # Close popup if present
     try:
         page.locator(".pum-close").click(timeout=5000)
         page.wait_for_timeout(2000)
@@ -36,11 +36,14 @@ with sync_playwright() as p:
     except:
         print("No popup found")
 
-    # Click next month arrow 4 times:
-    # July → August → September → October → November
+    # Print calendar header so we can confirm starting month
+    print(page.locator("body").inner_text()[:500])
+
+    # Click the right arrow 4 times:
+    # July -> August -> September -> October -> November
     for i in range(4):
-        page.locator(".fc-next-button").click(timeout=10000)
-        page.wait_for_timeout(2000)
+        page.locator(".fc-text-arrow").click(timeout=10000)
+        page.wait_for_timeout(3000)
 
     text = page.locator("body").inner_text()
 
@@ -55,31 +58,21 @@ if "November 2026" in text:
 
     print("Found November 2026")
 
-    if "November 7" in text or "Nov 7" in text:
+    if "2:00PM Tram Tour" in text:
+        print("Found 2 PM tour")
 
-        print("Found November 7")
-
-        if "2:00PM Tram Tour" in text:
-
-            print("Found 2:00 PM tour")
-
-            if "Availability: Sold Out (0)" in text:
-                print("Still sold out")
-
-            else:
-                send_alert(
-                    "🚨 Shark Valley Tram Tour OPEN!\n\n"
-                    "November 7, 2026 at 2:00 PM\n\n"
-                    + URL
-                )
-
-                print("ALERT SENT")
-
+        if "Availability: Sold Out (0)" in text:
+            print("Still sold out")
         else:
-            print("2:00 PM tour not found")
+            send_alert(
+                "🚨 Shark Valley Tram Tour OPEN!\n\n"
+                "November 7, 2026 at 2:00 PM\n\n"
+                + URL
+            )
+            print("ALERT SENT")
 
     else:
-        print("November 7 not found")
+        print("2 PM tour not found")
 
 else:
     print("Could not move to November 2026")
