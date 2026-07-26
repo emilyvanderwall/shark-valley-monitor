@@ -19,18 +19,28 @@ with sync_playwright() as p:
 
     page.wait_for_timeout(5000)
 
-    print("\nFRAMES:")
-    for i, frame in enumerate(page.frames):
-        print(i, frame.url)
+    # Find elements containing Tram Tour
+    elements = page.locator("text=Tram Tour")
+
+    print("Tram Tour matches:", elements.count())
+
+    for i in range(min(elements.count(), 10)):
+
+        el = elements.nth(i)
+
+        print("\n--- RESULT", i, "---")
 
         try:
-            text = frame.locator("body").inner_text(timeout=5000)
+            print("TAG:", el.evaluate("(e)=>e.tagName"))
+            print("CLASS:", el.get_attribute("class"))
+            print("ID:", el.get_attribute("id"))
+            print("TEXT:")
+            print(el.inner_text())
 
-            if "2:00" in text or "Tram Tour" in text:
-                print("\nFOUND CALENDAR IN FRAME", i)
-                print(text[:2000])
+            print("HTML:")
+            print(el.evaluate("(e)=>e.outerHTML")[:1500])
 
-        except:
-            pass
+        except Exception as e:
+            print("ERROR:", e)
 
     browser.close()
