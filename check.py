@@ -1,43 +1,5 @@
-from playwright.sync_api import sync_playwright
-import time
+    print("Looking for November 7 events...")
 
-URL = "https://www.sharkvalleytramtours.com/event-calendar/"
-
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
-    page = browser.new_page()
-
-    print("Opening calendar directly...")
-    page.goto(URL, wait_until="networkidle")
-
-    # close popup
-    try:
-        page.locator(".pum-close").click(timeout=5000)
-        print("Closed popup")
-    except:
-        pass
-
-    print("Calendar loaded")
-
-    # Select year 2026
-    selects = page.locator("select")
-
-    print("Dropdown count:", selects.count())
-
-    for i in range(selects.count()):
-        vals = selects.nth(i).locator("option").all_inner_texts()
-        print(i, vals[:5])
-
-    selects.nth(0).select_option("2026")
-    time.sleep(2)
-
-    # Select November
-    selects.nth(1).select_option("11")
-    time.sleep(3)
-
-    print("Looking for November 7...")
-
-    # Find day cell containing 7
     days = page.locator(".fc-day")
 
     found = False
@@ -45,28 +7,33 @@ with sync_playwright() as p:
     for i in range(days.count()):
         cell = days.nth(i)
 
-        txt = cell.inner_text()
+        date_text = cell.locator(".fc-day-number").inner_text(timeout=2000)
 
-        if txt.strip().startswith("7"):
+        if date_text.strip() == "7":
 
-            print("FOUND DAY CELL:")
-            print(txt)
+            print("\nFOUND NOVEMBER 7 CELL")
 
-            if "2:00PM Tram Tour" in txt:
+            events = cell.locator(".fc-event")
 
-                print("FOUND NOVEMBER 7 2PM!")
+            print("Events in cell:", events.count())
 
-                if "Sold Out" in txt:
-                    print("Status: SOLD OUT")
-                elif "high" in txt:
-                    print("Status: AVAILABLE")
-                else:
-                    print(txt)
+            for j in range(events.count()):
+                event_text = events.nth(j).inner_text()
+                print("---")
+                print(event_text)
 
-                found = True
-                break
+                if "2:00PM Tram Tour" in event_text:
+                    found = True
+
+                    if "Sold Out" in event_text:
+                        print("RESULT: November 7 2PM SOLD OUT")
+                    elif "high" in event_text or "medium" in event_text:
+                        print("RESULT: November 7 2PM AVAILABLE")
+                    else:
+                        print("RESULT:")
+                        print(event_text)
+
+            break
 
     if not found:
         print("November 7 2PM tour not available")
-
-    browser.close()
