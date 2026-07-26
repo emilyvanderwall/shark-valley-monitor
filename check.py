@@ -17,7 +17,6 @@ def send_alert(message):
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
-
     page = browser.new_page()
 
     page.goto(
@@ -28,15 +27,12 @@ with sync_playwright() as p:
 
     page.wait_for_timeout(5000)
 
-    # Select year 2026
-page.locator("select[rel='year']").select_option("2026")
+    page.locator("select[rel='year']").select_option("2026")
+    page.wait_for_timeout(2000)
 
-page.wait_for_timeout(2000)
+    page.locator("select[rel='month']").select_option("11")
+    page.wait_for_timeout(5000)
 
-# Select November
-page.locator("select[rel='month']").select_option("11")
-
-page.wait_for_timeout(5000)
     text = page.locator("body").inner_text()
 
     browser.close()
@@ -44,15 +40,10 @@ page.wait_for_timeout(5000)
 
 print(text[:3000])
 
-
-# Look for November 7 area
 if "November 7" in text or "Nov 7" in text:
-
     print("Found November 7")
 
     if "2:00PM Tram Tour" in text:
-
-        # Extract whether sold out
         if "Availability: Sold Out (0)" in text:
             print("Still sold out")
         else:
@@ -61,9 +52,8 @@ if "November 7" in text or "Nov 7" in text:
                 "November 7, 2026 at 2:00 PM\n"
                 + URL
             )
-
+            print("ALERT SENT")
     else:
         print("2 PM tour not found")
-
 else:
     print("November 7 not found")
