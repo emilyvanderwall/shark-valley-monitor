@@ -1,20 +1,6 @@
 from playwright.sync_api import sync_playwright
-import os
-import requests
-
-WEBHOOK = os.environ.get("DISCORD_WEBHOOK")
 
 URL = "https://www.sharkvalleytramtours.com/"
-
-
-def send_discord(message):
-    if WEBHOOK:
-        requests.post(
-            WEBHOOK,
-            json={"content": message},
-            timeout=10
-        )
-
 
 with sync_playwright() as p:
 
@@ -23,7 +9,6 @@ with sync_playwright() as p:
 
     page.goto(URL, wait_until="networkidle", timeout=60000)
 
-    # Close popup
     try:
         page.locator(".pum-close").click(timeout=5000)
         print("Closed popup")
@@ -34,25 +19,18 @@ with sync_playwright() as p:
 
     page.wait_for_timeout(5000)
 
-    # Look for anything containing 2:00PM
-    matches = page.locator("text=2:00PM")
-
-    print("2PM matches:", matches.count())
-
-    for i in range(matches.count()):
-
-        el = matches.nth(i)
-
-        print("\n--- MATCH", i, "---")
-        print(el.inner_text())
+    print("\nFRAMES:")
+    for i, frame in enumerate(page.frames):
+        print(i, frame.url)
 
         try:
-            print("TAG:", el.evaluate("(e)=>e.tagName"))
-            print("CLASS:", el.get_attribute("class"))
-            print("HTML:")
-            print(el.evaluate("(e)=>e.outerHTML")[:1000])
-        except Exception as e:
-            print(e)
+            text = frame.locator("body").inner_text(timeout=5000)
 
+            if "2:00" in text or "Tram Tour" in text:
+                print("\nFOUND CALENDAR IN FRAME", i)
+                print(text[:2000])
+
+        except:
+            pass
 
     browser.close()
