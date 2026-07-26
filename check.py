@@ -17,10 +17,19 @@ with sync_playwright() as p:
 
     print("Homepage loaded")
 
-    # Click the actual event calendar link
-    page.locator('a[href="/event-calendar/"]').first.click(timeout=15000)
+    # Find visible Buy Tickets link
+    links = page.locator('a[href*="event-calendar"]')
 
-    print("Clicked event calendar")
+    print("Ticket links found:", links.count())
+
+    for i in range(links.count()):
+        visible = links.nth(i).is_visible()
+        print(i, "visible:", visible)
+
+        if visible:
+            print("Clicking visible ticket link")
+            links.nth(i).click(timeout=15000)
+            break
 
     page.wait_for_load_state("networkidle", timeout=60000)
 
