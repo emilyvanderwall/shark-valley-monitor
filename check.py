@@ -28,7 +28,7 @@ with sync_playwright() as p:
 
     page.wait_for_timeout(5000)
 
-    # Close popup if present
+    # Close popup if it appears
     try:
         page.locator(".pum-close").click(timeout=5000)
         page.wait_for_timeout(2000)
@@ -36,13 +36,14 @@ with sync_playwright() as p:
     except:
         print("No popup found")
 
-    # Print calendar header so we can confirm starting month
+    # Show current calendar month
+    print("Starting calendar:")
     print(page.locator("body").inner_text()[:500])
 
-    # Click the right arrow 4 times:
-    # July -> August -> September -> October -> November
+    # Move forward 4 months:
+    # July 2026 -> August -> September -> October -> November
     for i in range(4):
-        page.locator(".fc-text-arrow").click(timeout=10000)
+        page.locator(".fc-text-arrow").nth(1).click(timeout=10000)
         page.wait_for_timeout(3000)
 
     text = page.locator("body").inner_text()
@@ -59,16 +60,21 @@ if "November 2026" in text:
     print("Found November 2026")
 
     if "2:00PM Tram Tour" in text:
+
         print("Found 2 PM tour")
 
         if "Availability: Sold Out (0)" in text:
+
             print("Still sold out")
+
         else:
+
             send_alert(
                 "🚨 Shark Valley Tram Tour OPEN!\n\n"
                 "November 7, 2026 at 2:00 PM\n\n"
                 + URL
             )
+
             print("ALERT SENT")
 
     else:
