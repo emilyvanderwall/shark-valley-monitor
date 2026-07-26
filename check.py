@@ -28,10 +28,18 @@ with sync_playwright() as p:
 
     page.wait_for_timeout(5000)
 
-    # The calendar opens on July 2026.
-    # Click next month 4 times to reach November 2026.
+    # Close popup if it appears
+    try:
+        page.locator(".pum-close").click(timeout=5000)
+        page.wait_for_timeout(2000)
+        print("Closed popup")
+    except:
+        print("No popup found")
+
+    # Click next month arrow 4 times:
+    # July → August → September → October → November
     for i in range(4):
-        page.locator("text=›").first.click()
+        page.locator(".fc-next-button").click(timeout=10000)
         page.wait_for_timeout(2000)
 
     text = page.locator("body").inner_text()
@@ -43,12 +51,10 @@ print("Calendar loaded")
 print(text[:3000])
 
 
-# Confirm we reached November
 if "November 2026" in text:
 
     print("Found November 2026")
 
-    # Look for November 7 and the 2 PM tour
     if "November 7" in text or "Nov 7" in text:
 
         print("Found November 7")
