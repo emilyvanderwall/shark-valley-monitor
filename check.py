@@ -1,7 +1,6 @@
 from playwright.sync_api import sync_playwright
 import os
 import requests
-import time
 
 DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK")
 
@@ -35,7 +34,7 @@ with sync_playwright() as p:
 
     print("Calendar loaded")
 
-    # Move to November 2026
+    # Navigate to November 2026
     for i in range(12):
 
         body = page.locator("body").inner_text()
@@ -44,18 +43,17 @@ with sync_playwright() as p:
             print("Found November 2026")
             break
 
-        print("Moving forward one month")
-
-        # Use JS click on the calendar next arrow
         clicked = page.evaluate("""
         () => {
             let arrows = document.querySelectorAll('.fc-text-arrow');
+
             if (arrows.length > 1) {
                 arrows[1].click();
                 return true;
             }
 
             let buttons = document.querySelectorAll('button');
+
             for (let b of buttons) {
                 if (b.innerText.includes('›')) {
                     b.click();
@@ -69,16 +67,20 @@ with sync_playwright() as p:
 
         if not clicked:
             print("Could not find next month button")
-            break
+            browser.close()
+            exit()
 
         page.wait_for_timeout(2000)
 
+    else:
+        print("Could not reach November 2026")
+        browser.close()
+        exit()
 
-    print("Searching events")
+
+    print("Checking November 7, 2026 2 PM Tram Tour")
 
     events = page.locator(".fc-event")
-
-    print("Event count:", events.count())
 
     found = False
 
@@ -90,32 +92,26 @@ with sync_playwright() as p:
 
         if "2:00PM Tram Tour" in text:
 
-            print("----------------")
             print(text)
 
-            # print HTML so we can see where the date lives
-            html = event.evaluate("(e)=>e.outerHTML")
+            if "Sold Out" not in text:
 
-            print(html[:500])
-
-            if (
-                "Sold Out" not in text
-                and "November 7" in text
-            ):
                 found = True
 
-                msg = (
-                    "🚨 Shark Valley Tram Tour Available!\n"
-                    "November 7, 2026 at 2:00 PM\n\n"
-                    + text
+                message = (
+                    "🚨 Shark Valley Tram Tour Available!\n\n"
+                    "Date: November 7, 2026\n"
+                    "Time: 2:00 PM Tram Tour\n\n"
+                    f"{text}"
                 )
 
-                print(msg)
-                send_discord(msg)
+                print(message)
+                send_discord(message)
+
                 break
 
 
     if not found:
-        print("November 7 2 PM tour still unavailable")
+        print("November 7, 2026 2 PM Tram Tour still unavailable")
 
     browser.close()
