@@ -1,49 +1,47 @@
-from playwright.sync_api import sync_playwright
+import requests
+from datetime import datetime
 import time
 
-URL = "https://www.sharkvalleytramtours.com/event-calendar/"
+print("Checking Shark Valley availability...")
 
-with sync_playwright() as p:
+url = "https://www.sharkvalleytramtours.com/wp-admin/admin-ajax.php"
 
-    browser = p.chromium.launch(headless=True)
+params = {
+    "action": "qscal",
+    "t": str(time.time()),
+    "v": "9ff15798a708d16fde95b7e7d8aaef47",
+    "start": int(datetime(2026, 11, 1).timestamp()),
+    "end": int(datetime(2026, 12, 1).timestamp())
+}
 
-    page = browser.new_page()
+response = requests.get(url, params=params)
 
-    def log_response(response):
-        url = response.url
+print("Status:", response.status_code)
 
-        if "ajax" in url.lower() or "calendar" in url.lower() or "event" in url.lower():
-            print("\nPOSSIBLE EVENT REQUEST:")
-            print(url)
+events = response.json()
 
-            try:
-                text = response.text()
-                print(text[:1000])
-            except:
-                pass
+print("Events returned:", len(events))
 
-    page.on("response", log_response)
+found = False
 
-    print("Opening calendar...")
-    page.goto(URL, wait_until="networkidle")
+for event in events:
+    start = event.get("start", "")
+    
+    if start.startswith("2026-11-07"):
+        print("----------------------")
+        print(event["title"])
+        print("Time:", start)
+        print("Availability:", event["available"])
+        print("Status:", event["avail-words"])
+        print("URL:", event["url"])
 
-    try:
-        page.locator(".pum-close").click(timeout=5000)
-        print("Closed popup")
-    except:
-        pass
+        if event["title"] == "2:00PM Tram Tour" and event["available"] > 0:
+            found = True
 
-    print("Calendar loaded")
 
-    # Change to November 2026
-    selects = page.locator("select")
+print("----------------------")
 
-    selects.nth(0).select_option("2026")
-    time.sleep(2)
-
-    selects.nth(1).select_option("November")
-    time.sleep(5)
-
-    print("Finished waiting for calendar data")
-
-    browser.close()
+if found:
+    print("🎉 November 7 2PM tram tour AVAILABLE!")
+else:
+    print("November 7 2PM tour not available")
