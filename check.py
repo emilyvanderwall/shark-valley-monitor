@@ -28,11 +28,15 @@ with sync_playwright() as p:
 
     page.wait_for_timeout(5000)
 
-    # Select November 2026
-    page.select_option("select", "2026-11")
+    # Select year 2026
+page.locator("select[rel='year']").select_option("2026")
 
-    page.wait_for_timeout(5000)
+page.wait_for_timeout(2000)
 
+# Select November
+page.locator("select[rel='month']").select_option("11")
+
+page.wait_for_timeout(5000)
     text = page.locator("body").inner_text()
 
     browser.close()
